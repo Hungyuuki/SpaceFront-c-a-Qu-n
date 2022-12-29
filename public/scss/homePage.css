@@ -329,6 +329,7 @@ ul {
 }
 
 .status-users-none {
+  border: 1px solid #d9d9d9;
   width: 30px;
   height: 30px;
   font-size: 10px;

@@ -21,10 +21,19 @@ const statusUser = ["離席中", "会議中", "取込中", "電話中", "外出�
 const colorStatus = ["gray", "green", "#5d0b0b", "#b5c014", "#911258", "orange", "#F3F3F3", "#555C55FF"];
 let floorIds: any = [];
 let role: any = 0;
+const statusIcon = [
+  "../static/logout.png", 
+  "../static/online-meeting.png", 
+  "../static/rush.png",
+  "../static/viber.png",
+  "../static/logout.png",
+  "../static/briefcase.png"
+  ]
 
 const CUSTOM_STATUS = 7;
 const SPECIAL_STATUS = 6;
 const ROLE_ADMIN = 2;
+const ICON_STATUS = 6
 
 document.addEventListener("mouseover", function (event) {
   localStorage.setItem("last_action_time", String(Date.now() + (1000 * 60 * 5)))
@@ -75,6 +84,10 @@ const load = async () => {
     //load current avartar
     userAvatar.setAttribute('src', avatar ?? '../static/defaultImage.png');
     userAvatar.style.display = "inline";
+    window.api.store('Get', 'userName')
+    .then((userName: any)=> {
+      document.getElementById("username").innerHTML = userName;
+    })
   })
 }
 
@@ -144,6 +157,7 @@ const renderHTMLInFloor = async (floor_id: any, rooms: any, users: any, oldFloor
         user_is_speaker: item.user_is_speaker,
         uid: item.uid,
         user_login_status: item.user_login_status,
+        user_status_icon:item.user_status_icon,
         custom_status: item.user_custom_status
       };
       if (result[index].users) {
@@ -154,9 +168,11 @@ const renderHTMLInFloor = async (floor_id: any, rooms: any, users: any, oldFloor
     }
   }
   if (oldFloorId != null) {
-    changeBackgroundColorForElement(`${oldFloorId}`, '#dbdbdb')
+    changeBackgroundColorForElement(`${oldFloorId}`, 'rgb(238, 238, 238)')
+    changeTextColorForElement(`${oldFloorId}`, 'rgb(61, 62, 68)')
   }
-  changeBackgroundColorForElement(`${floor_id}`, '#7f7f7f')
+  changeBackgroundColorForElement(`${floor_id}`, 'rgb(252, 76, 86)')
+  changeTextColorForElement(`${floor_id}`, '#ffffff')
   document.getElementById("room-list").innerHTML = result.map((item: any) => createRoomElement(item.room, item.users)).join('');
 }
 
@@ -167,10 +183,18 @@ function changeBackgroundColorForElement(elementId: string, color: string) {
   }
 }
 
+function changeTextColorForElement(elementId: string, color: string) {
+  const element = document.getElementById(elementId);
+  if (element != null) {
+    element.style.color = color;
+  }
+}
+
+
 function createUsersHTMLInRoom(user: any) {
   let displayMicOn = "none";
   let displayMicOff = "inline";
-  let dispayStatus = '';
+  let displayStatus = '';
   const colorBackroundStatus = colorStatus[user.user_login_status] ?? '';
   if (user.user_is_mic == '1') {
     displayMicOn = "inline";
@@ -185,31 +209,37 @@ function createUsersHTMLInRoom(user: any) {
   }
 
   let user_login_status = statusUser[user.user_login_status] ?? '';
+  let user_status_icon = statusIcon[user.user_status_icon] ?? '';
   if (user.user_login_status === CUSTOM_STATUS) {
-    user_login_status = user.custom_status
+    if(user.user_status_icon === ICON_STATUS){
+      user_status_icon = user.custom_status
     if (user.id === localStorage.getItem("userId")) {
       localStorage.setItem("custom-status", user.custom_status)
     }
   }
+}
 
-  if (!user_login_status) {
-    dispayStatus = '-none'
-    user_login_status = ''
+if (!user_login_status) {
+  if (!user_status_icon){
+  displayStatus = '-none';
+  user_login_status = ''
   }
+}
   return `
-                        <div class="user" id="user-${user.user_id}">
-                            <div class="logo-user button"><img src="${user.user_avatar}"></div>
-                            <h4 class="button">${user.user_name}</h4>
-                            <div id='login-status-${user.user_id}' class="status-users${dispayStatus}" style="background-color: ${colorBackroundStatus}; border: transparent">${user_login_status}</div>
-                            <div class="mic button" onclick="changeStatusMic(${user.user_id})">
-                              <i class="fa-solid fa-microphone" style="display: ${displayMicOn};" id="mic-on-${user.user_id}"></i>
-                              <i class="fa-solid fa-microphone-slash" id="mic-off-${user.user_id}" style="display: ${displayMicOff};"></i>
-                            </div>
-                            <div class="headphone button" onclick="changeStatusSpeaker(${user.user_id})">
-                              <i class="fa-solid fa-headphones" id="speaker-on-${user.user_id}" style="display: ${displaySpeakerOn};"></i>
-                              <img src="../static/earphone.png"  class="fa-solid fa-earphones" id="speaker-off-${user.user_id}" style="display: ${displaySpeakerOff}; width: 20px; height: 20px;" >
-                            </div>
-                        </div>
+  <div class="user" id="user-${user.user_id}">
+  <div class="logo-user button"><img src="${user.user_avatar}"></div>
+  <div id='login-status-${user.user_id}' class="status-users${displayStatus}" style="background-color: ${colorBackroundStatus};">
+  <img src="${user_status_icon}"></div>
+  <h4 class="button">${user.user_name}</h4>
+  <div class="mic button" onclick="changeStatusMic(${user.user_id})">
+    <i class="fa-solid fa-microphone" style="display: ${displayMicOn};" id="mic-on-${user.user_id}"></i>
+    <i class="fa-solid fa-microphone-slash" id="mic-off-${user.user_id}" style="display: ${displayMicOff};"></i>
+  </div>
+  <div class="headphone button" onclick="changeStatusSpeaker(${user.user_id})">
+    <i class="fa-solid fa-headphones" id="speaker-on-${user.user_id}" style="display: ${displaySpeakerOn};"></i>
+    <img src="../static/earphone.png"  class="fa-solid fa-earphones" id="speaker-off-${user.user_id}" style="display: ${displaySpeakerOff}; width: 20px; height: 20px;" >
+  </div>
+</div>
                                           `;
 }
 
@@ -217,6 +247,11 @@ function createRoomHTML(room: any) {
   return `
       ${role == ROLE_ADMIN ? `<button onclick ="showConfirmModel(${room.room_id} , 0)" class="remove-room"> x </button>` : ''}
       <div class="header-room button"  onclick="joinRoom(${room.room_id})">
+      <div class="circle">
+                <svg class="svg-circle">
+                    <circle cx="50" cy="40" r="30"></circle>
+                  </svg>
+                </div>
         <h4 class="button">${room.room_name}</h4>
       </div>
       <div id="info-user-room-${room.room_id}">
@@ -230,6 +265,11 @@ function createRoomElement(room: any, users: any) {
         <div class="relative" id="room-${room.room_id}">
           ${role == ROLE_ADMIN ? `<button onclick ="showConfirmModel(${room.room_id}, ${users?.length})" class="remove-room"> x </button>` : ''}
           <div class="header-room button"  onclick="joinRoom(${room.room_id})">
+          <div class="circle">
+          <svg class="svg-circle">
+              <circle cx="50" cy="40" r="30"></circle>
+            </svg>
+          </div>
             <h4 class="button" style="font-size: 14px">${room.room_name} </h4>
           </div>
           <div id="info-user-room-${room.room_id}">
@@ -285,7 +325,13 @@ const showPageFloor = (floor_id: any) => {
     }
     if (floors.floors[0] == "") {
       if (role == ROLE_ADMIN) {
-        let elButtonAdd = `<div class="floor add-new" style="top: 10px; background-color: black; z-index: -1;" onclick="addFloor()"><p>+</p></div>`;
+        let elButtonAdd = 
+        // `<div class="floor add-new" style="top: 10px; background-color: black; z-index: -1;" onclick="addFloor()"><p>+</p></div>`;
+        `<svg class="floors add-new" viewBox="0 0 100 100" style="width: 40px; height: 40px; background-color: rgb(255,255,255);" onclick="addFloor()">
+          <circle cx="50" cy="37" r="29" fill="none" stroke-width="6"></circle>
+          <line class="plus" x1="35.5" y1="38" x2="65.5" y2="38" stroke-width="6"></line>
+          <line class="plus" x1="50" y1="23.5" x2="50" y2="53.5" stroke-width="6"></line>
+        </svg>`;
         addElement(elButtonAdd, "floors");
       }
     } else {
@@ -344,6 +390,7 @@ const loadStatusUser = (user: any) => {
     status.innerText = 'ステータス変更';
   } else {
     status.innerText = statusUser[user.login_status];
+    //Xử lý chữ trên nút status màu xanh
   }
   if (user.is_mic == 1) {
     micOn.style.display = "inline";
@@ -365,20 +412,39 @@ function createFLoorsHTML(floors: any, floor_id: any, role: any) {
   localStorage.setItem('first_floor', floors[0].id);
   let floorsHTML = ``;
   for (let i = 0; i < floors.length; i++) {
-    floorsHTML += createFLoorElement(floors[i], i * 60, floors[i].id == floor_id ? '#7f7f7f' : '#dbdbdb', role);
+    //Tạo floor
+    floorsHTML += createFLoorElement(floors[i], 
+      //Set màu nền, click thì đỏ, ko click thì xám
+      floors[i].id == floor_id ? 'rgb(252,76,86)': 'rgb(238, 238, 238)',
+      //set màu text, clock thì trắng, ko click thì đen
+      floors[i].id == floor_id ?'#ffffff': 'rgb(61, 62, 68)', 
+      role);
   }
   if (role == ROLE_ADMIN) {
-    floorsHTML += `<div class="floor add-new" style="top: ${floors.length * 60}px; background-color: black; z-index: -1;" onclick="addFloor()">
-                    <p>+</p>
-                   </div>`;
+    floorsHTML += `<svg class="floors add-new" viewBox="0 0 100 100" style="width: 40px; height: 40px; background-color: rgb(255,255,255);" onclick="addFloor()">
+  <circle cx="50" cy="37" r="29" fill="none" stroke-width="6"></circle>
+  <line class="plus" x1="35.5" y1="38" x2="65.5" y2="38" stroke-width="6"></line>
+  <line class="plus" x1="50" y1="23.5" x2="50" y2="53.5" stroke-width="6"></line>
+  </svg>`;
   }
   return floorsHTML;
 }
 
-function createFLoorElement(floor: any, position: any, backgroundColor: any, role: any) {
+function createFLoorElement(floor: any, backgroundColor: any, color: any, role: any) {
   return `
-  <div class="floor" style="top: ${position}px; background-color: ${backgroundColor}; z-index: 1000;" id=${floor.id} onclick="showFloor(${floor.id})" >
-    ${role == ROLE_ADMIN ? `<button onclick ="showConfirmModelFloor(event, ${floor.id}, ${position})" class="remove-floor" > x </button>` : ''}
+  <div class="floor" style="display: inline-flex; max-width: 100px; min-width: 60px;
+    height: 30px;
+    border-radius: 15px;
+    margin: auto;
+    scroll-snap-align: start;
+    scroll-snap-stop: normal;
+    vertical-align: middle; 
+    background-color: ${backgroundColor}; 
+    color: ${color};
+    z-index: 1000;" 
+    id=${floor.id} 
+    onclick="showFloor(${floor.id})" >
+    ${role == ROLE_ADMIN ? `<button onclick ="showConfirmModelFloor(event, ${floor.id})" class="remove-floor" > x </button>` : ''}
     <p>${floor.name}</p>
   </div>`;
 }
@@ -389,12 +455,13 @@ function onJoinRoomEvent(user: any) {
     oldUserElement.parentNode.removeChild(oldUserElement);
   }
 
-  let loginStatus = statusUser[user.login_status] ?? '';
-  if (user.login_status == CUSTOM_STATUS) {
-    loginStatus = user.custom_status
-  }
-  const colorBackroundStatus = colorStatus[user.login_status] ?? '';
-  let dispayStatus = ''
+// let loginStatus = statusUser[user.login_status] ?? '';
+let loginStatus = statusIcon[user.login_status] ?? '';
+if (user.login_status == CUSTOM_STATUS) {
+  loginStatus = user.custom_status
+}
+const colorBackroundStatus = colorStatus[user.login_status] ?? '';
+  let displayStatus = ''
   let displayMicOn = "none";
   let displayMicOff = "inline";
   if (user.user_is_mic == '1') {
@@ -410,13 +477,16 @@ function onJoinRoomEvent(user: any) {
   }
 
   if (!user.login_status) {
-    dispayStatus = '-none'
+    if(!user.statusIcon){
+    displayStatus = '-none'
   }
+}
   let text = `
                       <div class="user" id="user-${user.userId}">
                           <div class="logo-user button"><img src="${user.userAvatar}"></div>
+                          <div id='login-status-${user.userId}' class="status-users${displayStatus}" 
                           <h4 class="button">${user.username}</h4>
-                          <div id='login-status-${user.userId}' class="status-users${dispayStatus}" style="background-color: ${colorBackroundStatus}; border:transparent;">${loginStatus}</div>
+                          style="background-color: ${colorBackroundStatus};"><img src="${loginStatus}"></div>
                           <div class="mic button" onclick="changeStatusMic(${user.userId})">
                             <i class="fa-solid fa-microphone" style="display: ${displayMicOn};" id="mic-on-${user.userId}"></i>
                             <i class="fa-solid fa-microphone-slash" id="mic-off-${user.userId}" style="display: ${displayMicOff};"></i>
@@ -452,8 +522,9 @@ const renderUserHTML = (user: any): string => {
   return `
   <div class="user" id="user-${user.userId}">
     <div class="logo-user button"><img src="${user.userAvatar}"></div>
+    <div id='login-status-${user.userId}' class="status-users${user.login_status ? '-none' : ''}" style="background-color: ${colorBackroundStatus};">
+    <img src="${loginStatus}"></div>
     <h4 class="button">${user.username}</h4>
-    <div id='login-status-${user.userId}' class="status-users${user.login_status ? '-none' : ''}" style="background-color: ${colorBackroundStatus}; border:transparent;">${loginStatus}</div>
     <div class="mic button" onclick="changeStatusMic(${user.userId})">
       <i class="fa-solid fa-microphone" style="display: ${micOn.style.display};" id="mic-on-${user.userId}"></i>
       <i class="fa-solid fa-microphone-slash" id="mic-off-${user.userId}" style="display: ${micOff.style.display};"></i>
@@ -538,14 +609,20 @@ const onChangeStatusMicAndSpeakerEvent = (event: any) => {
 }
 
 const onChangeStatusEvent = (user: any) => {
-  const loginStatus = document.querySelector(`#login-status-${user.userId}`) as HTMLInputElement;
+  var loginStatus = document.querySelector(`#login-status-${user.userId} img`) as HTMLInputElement;
+  var statusBackground = document.querySelector(`#login-status-${user.userId}`) as HTMLInputElement;
   if (loginStatus != null) {
     if (user.status == CUSTOM_STATUS) {
-      loginStatus.innerText = user.custom_status
-    } else {
-      loginStatus.innerText = statusUser[user.status];
+      loginStatus.src = user.custom_status
     }
-    loginStatus.style.backgroundColor = colorStatus[user.status];
+    if (user.status == SPECIAL_STATUS) {
+    statusBackground.style.backgroundColor = colorStatus[user.status];
+    loginStatus.src=''
+    }
+    else {
+      loginStatus.src = statusIcon[user.status];
+    }
+    statusBackground.style.backgroundColor = colorStatus[user.status];
   }
   if (localStorage.getItem('userId') == user.userId) {
     if (user.status === SPECIAL_STATUS) {
